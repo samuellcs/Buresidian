@@ -18,7 +18,7 @@ Este projeto consiste em uma aplicação completa com API e interface de usuári
 
 1. Clone o repositório:
 ```bash
-git clone <url-do-repositorio>
+git clone https://github.com/samuellcs/Buresidian.git
 cd Buresidian
 ```
 
@@ -59,3 +59,4 @@ npm start
 ## Licença
 
 Este projeto está sob a licença MIT - veja o arquivo [LICENSE](LICENSE) para detalhes.
+
