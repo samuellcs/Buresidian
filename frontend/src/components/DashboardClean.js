@@ -31,7 +31,7 @@ const SimpleSidebar = ({ folders, selectedFolder, onFolderSelect }) => (
   </aside>
 );
 
-const SimpleHomePage = ({ folders, notes, onCreateFolder, onCreateNote }) => (
+const SimpleHomePage = ({ folders, notes, onCreateFolder, onCreateNote, onNoteSelect, onNoteDelete }) => (
   <div className="home-page">
     <h2>🏠 Bem-vindo ao Buresidian</h2>
     <div className="stats">
@@ -55,31 +55,78 @@ const SimpleHomePage = ({ folders, notes, onCreateFolder, onCreateNote }) => (
     <div className="recent-notes">
       <h3>📄 Notas Recentes</h3>
       {notes.slice(0, 5).map(note => (
-        <div key={note.id} className="recent-note">
-          <h4>{note.title}</h4>
-          <p>{new Date(note.updated_at).toLocaleDateString('pt-BR')}</p>
+        <div key={note.id} className="recent-note" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', padding: '10px', border: '1px solid #333', borderRadius: '4px' }}>
+          <div onClick={() => onNoteSelect && onNoteSelect(note)} style={{ cursor: 'pointer', flex: 1 }}>
+            <h4>{note.title}</h4>
+            <p>{new Date(note.updated_at).toLocaleDateString('pt-BR')}</p>
+          </div>
+          {onNoteDelete && (
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                if (window.confirm(`Tem certeza que deseja excluir a nota "${note.title}"?`)) {
+                  onNoteDelete(note.id);
+                }
+              }}
+              style={{
+                background: '#ff4444',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                padding: '5px 8px',
+                cursor: 'pointer',
+                fontSize: '12px'
+              }}
+            >
+              🗑️
+            </button>
+          )}
         </div>
       ))}
     </div>
   </div>
 );
 
-const SimpleNotesList = ({ notes, onNoteSelect }) => (
+const SimpleNotesList = ({ notes, onNoteSelect, onNoteDelete }) => (
   <div className="notes-list">
     <h2>📝 Suas Notas</h2>
     <div className="notes-grid">
       {notes.map(note => (
-        <div key={note.id} className="note-card" onClick={() => onNoteSelect(note)}>
-          <h3>{note.title}</h3>
-          <p>{note.content.substring(0, 100)}...</p>
-          <small>{new Date(note.updated_at).toLocaleDateString('pt-BR')}</small>
+        <div key={note.id} className="note-card">
+          <div onClick={() => onNoteSelect(note)} style={{ cursor: 'pointer', flex: 1 }}>
+            <h3>{note.title}</h3>
+            <p>{note.content.substring(0, 100)}...</p>
+            <small>{new Date(note.updated_at).toLocaleDateString('pt-BR')}</small>
+          </div>
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              if (window.confirm(`Tem certeza que deseja excluir a nota "${note.title}"?`)) {
+                onNoteDelete(note.id);
+              }
+            }}
+            className="delete-note-btn"
+            title="Excluir nota"
+            style={{
+              background: '#ff4444',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              padding: '5px 8px',
+              cursor: 'pointer',
+              fontSize: '12px',
+              marginTop: '10px'
+            }}
+          >
+            🗑️ Excluir
+          </button>
         </div>
       ))}
     </div>
   </div>
 );
 
-const SimpleNoteEditor = ({ note, onNoteUpdate }) => {
+const SimpleNoteEditor = ({ note, onNoteUpdate, onNoteDelete, onBackToHome }) => {
   const [title, setTitle] = useState(note?.title || '');
   const [content, setContent] = useState(note?.content || '');
 
@@ -93,6 +140,22 @@ const SimpleNoteEditor = ({ note, onNoteUpdate }) => {
     } catch (error) {
       console.error('Erro ao salvar nota:', error);
       alert('Erro ao salvar nota');
+    }
+  };
+
+  const deleteNote = async () => {
+    if (!note) return;
+    
+    if (window.confirm(`Tem certeza que deseja excluir a nota "${note.title}"?`)) {
+      try {
+        await axios.delete(`/notes/${note.id}`);
+        alert('Nota excluída com sucesso!');
+        onNoteDelete(note.id);
+        onBackToHome();
+      } catch (error) {
+        console.error('Erro ao excluir nota:', error);
+        alert('Erro ao excluir nota');
+      }
     }
   };
 
@@ -113,7 +176,23 @@ const SimpleNoteEditor = ({ note, onNoteUpdate }) => {
           placeholder="Título da nota..."
           className="note-title-input"
         />
-        <button onClick={saveNote} className="save-btn">💾 Salvar</button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button onClick={saveNote} className="save-btn">💾 Salvar</button>
+          <button 
+            onClick={deleteNote} 
+            className="delete-btn"
+            style={{
+              background: '#ff4444',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              padding: '8px 12px',
+              cursor: 'pointer'
+            }}
+          >
+            🗑️ Excluir
+          </button>
+        </div>
       </div>
       <textarea
         value={content}
@@ -186,6 +265,19 @@ const DashboardClean = () => {
     }
   };
 
+  const deleteNote = async (noteId) => {
+    try {
+      await axios.delete(`/notes/${noteId}`);
+      setNotes(notes.filter(note => note.id !== noteId));
+      if (selectedNote && selectedNote.id === noteId) {
+        setSelectedNote(null);
+      }
+    } catch (error) {
+      console.error('Error deleting note:', error);
+      alert('Erro ao excluir nota');
+    }
+  };
+
   const handleLogout = () => {
     logout();
     navigate('/login');
@@ -243,6 +335,11 @@ const DashboardClean = () => {
                   notes={notes}
                   onCreateFolder={createFolder}
                   onCreateNote={createNote}
+                  onNoteSelect={(note) => {
+                    setSelectedNote(note);
+                    navigate('/dashboard/editor');
+                  }}
+                  onNoteDelete={deleteNote}
                 />
               } 
             />
@@ -255,6 +352,7 @@ const DashboardClean = () => {
                     setSelectedNote(note);
                     navigate('/dashboard/editor');
                   }}
+                  onNoteDelete={deleteNote}
                 />
               } 
             />
@@ -264,6 +362,8 @@ const DashboardClean = () => {
                 <SimpleNoteEditor 
                   note={selectedNote}
                   onNoteUpdate={loadData}
+                  onNoteDelete={deleteNote}
+                  onBackToHome={() => navigate('/dashboard')}
                 />
               } 
             />
