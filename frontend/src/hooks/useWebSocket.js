@@ -82,6 +82,14 @@ export const useWebSocket = (noteId) => {
       case 'users_online':
         setOnlineUsers(message.users || []);
         break;
+      case 'version_created':
+        // Notificação de nova versão criada
+        console.log(`${message.username} criou uma nova versão (${message.version_number})`);
+        break;
+      case 'version_restored':
+        // Notificação de versão restaurada
+        console.log(`${message.username} restaurou a versão ${message.version_number}`);
+        break;
       default:
         break;
     }

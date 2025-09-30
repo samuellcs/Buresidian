@@ -3,10 +3,14 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { Save, Eye, Edit, MessageCircle, Upload, Trash } from 'lucide-react';
+import { Save, Eye, Edit, MessageCircle, Upload, Trash, History, Network, RotateCcw, Clock } from 'lucide-react';
 import axios from 'axios';
 import { useWebSocket } from '../hooks/useWebSocket';
+import { useAutoSave, useLocalBackup } from '../hooks/useAutoSave';
+import { useNotifications } from '../contexts/NotificationContext';
 import OnlineUsers from './OnlineUsers';
+import VersionHistory from './VersionHistory';
+import NotesGraph from './NotesGraph';
 import '../styles/NoteEditor.css';
 
 const NoteEditor = ({ note, onNoteUpdate }) => {
@@ -18,9 +22,22 @@ const NoteEditor = ({ note, onNoteUpdate }) => {
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
   const [isTyping, setIsTyping] = useState(false);
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [showNotesGraph, setShowNotesGraph] = useState(false);
+  const [reactions, setReactions] = useState({});
   
   // WebSocket para colaboração
   const { isConnected, onlineUsers, sendContentChange } = useWebSocket(note?.id);
+  
+  // Sistema de notificações
+  const { showSuccess, showError, showWarning } = useNotifications();
+  
+  // Sistema de backup local
+  const { createBackup, restoreBackup, listBackups } = useLocalBackup(
+    `note_${note?.id}`, 
+    { title, content },
+    { interval: 30000, maxBackups: 5 }
+  );
   
   // Refs para controle de debounce e websocket
   const saveTimeout = useRef(null);
@@ -52,6 +69,12 @@ const NoteEditor = ({ note, onNoteUpdate }) => {
           setIsTyping(true);
           setTimeout(() => setIsTyping(false), 2000);
         }
+      } else if (message.type === 'reaction_update' && message.note_id === note.id) {
+        // Atualizar reações em tempo real
+        setReactions(prev => ({
+          ...prev,
+          [message.emoji]: message.count
+        }));
       }
     };
 
@@ -73,6 +96,37 @@ const NoteEditor = ({ note, onNoteUpdate }) => {
     }
   }, [note]);
 
+  const loadReactions = useCallback(async () => {
+    if (!note) return;
+    try {
+      const response = await axios.get(`/notes/${note.id}/reactions`);
+      setReactions(response.data);
+    } catch (error) {
+      console.error('Error loading reactions:', error);
+    }
+  }, [note]);
+
+  const toggleReaction = async (emoji) => {
+    if (!note) return;
+    try {
+      const response = await axios.post(`/notes/${note.id}/reactions`, { emoji });
+      setReactions(prev => ({
+        ...prev,
+        [emoji]: response.data.count
+      }));
+      if (response.data.count === 0) {
+        setReactions(prev => {
+          const newReactions = { ...prev };
+          delete newReactions[emoji];
+          return newReactions;
+        });
+      }
+    } catch (error) {
+      console.error('Error toggling reaction:', error);
+      showError('Erro ao reagir à nota');
+    }
+  };
+
   const saveNote = useCallback(async () => {
     if (!note) return;
     
@@ -84,14 +138,39 @@ const NoteEditor = ({ note, onNoteUpdate }) => {
       });
       setLastSaved(new Date());
       if (onNoteUpdate) onNoteUpdate();
+      return true;
     } catch (error) {
       console.error('Error saving note:', error);
+      showError('Erro ao salvar nota');
+      throw error;
     } finally {
       setSaving(false);
     }
-  }, [note, title, content, onNoteUpdate]);
+  }, [note, title, content, onNoteUpdate, showError]);
 
-  // Auto-save com debounce
+  // Auto-save inteligente
+  const { hasChanges, forceSave } = useAutoSave(
+    { title, content },
+    saveNote,
+    {
+      delay: 3000, // 3 segundos
+      enabled: !!note,
+      onSaveSuccess: () => setLastSaved(new Date()),
+      compareFunction: (newData, oldData) => {
+        return newData.title !== oldData.title || newData.content !== oldData.content;
+      }
+    }
+  );
+
+  useEffect(() => {
+    if (note) {
+      setTitle(note.title || '');
+      setContent(note.content || '');
+      loadComments();
+      loadReactions();
+    }
+  }, [note, loadComments, loadReactions]);
+
   useEffect(() => {
     if (saveTimeout.current) {
       clearTimeout(saveTimeout.current);
@@ -228,6 +307,50 @@ const NoteEditor = ({ note, onNoteUpdate }) => {
             {saving ? 'Salvando...' : 'Salvar'}
           </button>
           
+          <button 
+            onClick={() => setShowVersionHistory(true)} 
+            className="history-button"
+            title="Histórico de Versões"
+          >
+            <History size={16} />
+          </button>
+          
+          <button 
+            onClick={() => setShowNotesGraph(true)} 
+            className="graph-button"
+            title="Visualizar conexões entre notas"
+          >
+            <Network size={16} />
+          </button>
+          
+          <button 
+            onClick={createBackup}
+            className="backup-button"
+            title="Criar backup local"
+          >
+            <Clock size={16} />
+          </button>
+          
+          <button 
+            onClick={() => {
+              const backups = listBackups();
+              if (backups.length > 0) {
+                const backup = restoreBackup(0);
+                if (backup) {
+                  setTitle(backup.title);
+                  setContent(backup.content);
+                  showSuccess('Backup restaurado com sucesso');
+                }
+              } else {
+                showWarning('Nenhum backup disponível');
+              }
+            }}
+            className="restore-button"
+            title="Restaurar último backup"
+          >
+            <RotateCcw size={16} />
+          </button>
+          
           <button onClick={deleteNote} className="delete-button">
             <Trash size={16} />
           </button>
@@ -315,6 +438,22 @@ Cole imagens diretamente!"
           )}
         </div>
 
+        {/* Seção de Reações */}
+        <div className="reactions-section">
+          <h3>Reações</h3>
+          <div className="reactions-buttons">
+            {['👍', '❤️', '🔥'].map(emoji => (
+              <button
+                key={emoji}
+                className={`reaction-button ${reactions[emoji] > 0 ? 'active' : ''}`}
+                onClick={() => toggleReaction(emoji)}
+              >
+                {emoji} {reactions[emoji] || 0}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="comments-panel">
           <div className="comments-header">
             <h3>
@@ -355,6 +494,27 @@ Cole imagens diretamente!"
           </div>
         </div>
       </div>
+      
+      <VersionHistory 
+        noteId={note?.id}
+        isOpen={showVersionHistory}
+        onClose={() => setShowVersionHistory(false)}
+        onVersionRestore={() => {
+          // Recarregar a nota após restaurar uma versão
+          if (onNoteUpdate) onNoteUpdate();
+          // Recarregar dados locais
+          if (note) {
+            setTitle(note.title);
+            setContent(note.content);
+          }
+        }}
+      />
+      
+      <NotesGraph 
+        isOpen={showNotesGraph}
+        onClose={() => setShowNotesGraph(false)}
+        currentNoteId={note?.id}
+      />
     </div>
   );
 };

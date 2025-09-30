@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
 const AuthContext = createContext();
@@ -17,8 +17,29 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }) => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const logout = useCallback(() => {
+    localStorage.removeItem('token');
+    delete axios.defaults.headers.common['Authorization'];
+    setIsAuthenticated(false);
+    setUser(null);
+  }, []);
+
+  const validateToken = useCallback(async () => {
+    try {
+      const response = await axios.get('/auth/me');
+      setUser(response.data);
+      setIsAuthenticated(true);
+    } catch (error) {
+      console.error('Token validation failed:', error);
+      logout();
+    } finally {
+      setLoading(false);
+    }
+  }, [logout]);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -28,19 +49,7 @@ export const AuthProvider = ({ children }) => {
     } else {
       setLoading(false);
     }
-  }, []);
-
-  const validateToken = async () => {
-    try {
-      const response = await axios.get('/auth/me');
-      setUser(response.data);
-    } catch (error) {
-      console.error('Token validation failed:', error);
-      logout();
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [validateToken]);
 
   const login = async (username, password) => {
     try {
@@ -55,6 +64,7 @@ export const AuthProvider = ({ children }) => {
       
       const userResponse = await axios.get('/auth/me');
       setUser(userResponse.data);
+      setIsAuthenticated(true);
       
       return { success: true };
     } catch (error) {
@@ -79,6 +89,7 @@ export const AuthProvider = ({ children }) => {
       
       const userResponse = await axios.get('/auth/me');
       setUser(userResponse.data);
+      setIsAuthenticated(true);
       
       return { success: true };
     } catch (error) {
@@ -90,14 +101,9 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    delete axios.defaults.headers.common['Authorization'];
-    setUser(null);
-  };
-
   const value = {
     user,
+    isAuthenticated,
     login,
     register,
     logout,

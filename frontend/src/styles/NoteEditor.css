@@ -1,3 +1,53 @@
+/* Reactions Section */
+.reactions-section {
+  padding: 1rem 1.5rem;
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.reactions-section h3 {
+  margin: 0 0 0.75rem 0;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.reactions-buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.reaction-button {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem 0.75rem;
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.reaction-button:hover {
+  background-color: var(--primary-hover);
+  border-color: var(--primary-color);
+  transform: translateY(-1px);
+}
+
+.reaction-button.active {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  color: white;
+}
+
+.reaction-button.active:hover {
+  background-color: var(--primary-hover);
+}
+
+/* Existing styles continue here */
 .note-editor {
   flex: 1;
   display: flex;
@@ -91,18 +141,33 @@
   transform: none;
 }
 
-.delete-button {
+.delete-button, .history-button {
   padding: 0.5rem;
   border: none;
   border-radius: 6px;
   background-color: transparent;
-  color: var(--danger-color);
   cursor: pointer;
   transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.delete-button {
+  color: var(--danger-color);
 }
 
 .delete-button:hover {
   background-color: var(--danger-color);
+  color: white;
+}
+
+.history-button {
+  color: var(--accent-primary);
+}
+
+.history-button:hover {
+  background-color: var(--accent-primary);
   color: white;
 }
 
@@ -431,6 +496,103 @@
 
 .editor-empty p {
   font-size: 0.875rem;
+}
+
+/* Adicionar estilo para o botão de grafo */
+.graph-button {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 4px;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+}
+
+.graph-button:hover {
+  background: linear-gradient(135deg, #1d4ed8, #1e40af);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3);
+}
+
+.graph-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+}
+
+/* Garantir que o botão se integre bem com os outros */
+.graph-button svg {
+  flex-shrink: 0;
+}
+
+/* Botão de backup */
+.backup-button {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 4px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+}
+
+.backup-button:hover {
+  background: linear-gradient(135deg, #059669, #047857);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+}
+
+/* Botão de restaurar */
+.restore-button {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 4px;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(245, 158, 11, 0.2);
+}
+
+.restore-button:hover {
+  background: linear-gradient(135deg, #d97706, #b45309);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(245, 158, 11, 0.3);
+}
+
+/* Indicador de auto-save */
+.auto-save-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 4px 8px;
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+}
+
+.auto-save-indicator.has-changes {
+  color: var(--accent-primary);
+  animation: pulse 2s infinite;
+}
+
+.auto-save-indicator.saving {
+  color: var(--warning-color);
 }
 
 @media (max-width: 768px) {

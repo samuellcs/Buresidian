@@ -16,16 +16,16 @@ const OnlineUsers = ({ users, isConnected }) => {
     <div className="online-users">
       <div className="connection-status">
         <Wifi size={16} className="wifi-icon" />
-        <span>Tempo Real</span>
+        <span>Colaboração Ativa</span>
       </div>
       
       {users.length > 0 && (
         <div className="users-list">
           <Users size={14} />
-          <span className="users-count">{users.length}</span>
+          <span className="users-count">{users.length} online</span>
           <div className="users-tooltip">
             <div className="users-tooltip-content">
-              <h4>Usuários Online:</h4>
+              <h4>Editando Agora:</h4>
               {users.map(user => (
                 <div key={user.user_id} className="online-user">
                   <div className="user-avatar">
